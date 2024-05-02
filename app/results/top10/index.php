@@ -443,7 +443,6 @@
                     tr2.addClass('table-warning');
                     const trWinner = `
                         <tr data-team-id="${tr1.attr('data-team-id')}">
-                            <!-- number -->
                             <td class="pe-3 fw-bold text-center">
                                 <h3 class="m-0">
                                     ${tr1.find('.team-number').text()}
