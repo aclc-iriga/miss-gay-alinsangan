@@ -12,7 +12,7 @@ export default createStore({
 
     state: {
         app: {
-            title: 'Miss Gay Alinsangan 2024',
+            title: 'Miss Gay Alinsangan 2025',
             org: 'ACLC College Iriga',
             backendDir: 'app',
             sideNav: false
@@ -39,7 +39,7 @@ export default createStore({
         // get app url
         appURL(state) {
             const location = window.location;
-            if(location.hostname === 'localhost' && location.port === '5197')
+            if(location.hostname === 'localhost' && location.port === '5207')
                 return `http://localhost${import.meta.env.BASE_URL}${state.app.backendDir}`;
             else
                 return `${location.protocol}//${location.hostname}${import.meta.env.BASE_URL}${state.app.backendDir}`;
