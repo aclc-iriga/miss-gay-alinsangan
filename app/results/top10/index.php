@@ -6,7 +6,6 @@ require_once '../../config/database.php';
 require_once '../../models/Admin.php';
 require_once '../../models/Team.php';
 require_once '../../models/Event.php';
-require_once '../../models/Judge.php';
 
 // involved events
 const EVENTS = [
@@ -35,6 +34,9 @@ const EVENTS = [
 // initialize titles
 $titles = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
+// initialize location quota
+const LOCATION_QUOTA = 1;
+
 // initialize admin
 $admin = new Admin();
 
@@ -42,47 +44,25 @@ $admin = new Admin();
 $events  = [];
 $results = [];
 $competition_title = '';
-$judges        = [];
-$judge_ids     = [];
-$technicals    = [];
-$technical_ids = [];
+$judges     = [];
+$technicals = [];
 for($i=0; $i<sizeof(EVENTS); $i++) {
     $events[]  = Event::findBySlug(EVENTS[$i]['slug']);
     $results[] = $admin->tabulate($events[$i]);
-    $competition_title = $events[$i]->getCategory()->getCompetition()->getTitle();
 
-    $event_judges = $events[$i]->getAllJudges();
-    for($j=0; $j<sizeof($event_judges); $j++) {
-        $event_judge = $event_judges[$j];
-        $event_judge_id = $event_judge->getId();
-        if(!in_array($event_judge_id, $judge_ids)) {
-            $judges[] = $event_judge;
-            $judge_ids[] = $event_judge_id;
-        }
-    }
-
-    $event_technicals = $events[$i]->getAllTechnicals();
-    for($j=0; $j<sizeof($event_technicals); $j++) {
-        $event_technical    = $event_technicals[$j];
-        $event_technical_id = $event_technical->getId();
-        if(!in_array($event_technical_id, $technical_ids)) {
-            $technicals[]    = $event_technical->toArray();
-            $technical_ids[] = $event_technical_id;
-        }
+    if($i == 0) {
+        $competition_title = $events[$i]->getCategory()->getCompetition()->getTitle();
+        $judges     = $events[$i]->getAllJudges();
+        $technicals = $events[$i]->getAllTechnicals();
     }
 }
-
-if (!empty($events)) {
-    $criteria = $events[0]->getAllCriteria();
-}
-
 
 // process result
 $result = [];
 $unique_total_rank_ave_equivs = [];
 $unique_total_percentages = [];
 $unique_adjusted_ranks = [];
-foreach($events[0]->getAllTeams() as $team) {
+foreach(Team::all() as $team) {
     $team_key = 'team_'.$team->getId();
     $t = [
         'info'    => $team->toArray(),
@@ -98,8 +78,7 @@ foreach($events[0]->getAllTeams() as $team) {
                 'fractional' => 0
             ]
         ],
-        'title' => '',
-        'unlocked' => false
+        'title' => ''
     ];
 
     // get rank and average
@@ -286,7 +265,7 @@ foreach ($judges as $judge) {
             border-left: 2px solid #aaa !important;
         }
     </style>
-    <title>Top <?= sizeof($titles) ?> | <?= $competition_title ?>  </title>
+    <title>Top <?= sizeof($titles) ?> | <?= $competition_title ?></title>
 </head>
 <body>
 <?php if (!empty($judgesWithUnlockedRatings)) { ?>
@@ -310,7 +289,7 @@ foreach ($judges as $judge) {
         <thead class="bt">
         <tr class="table-secondary">
             <th colspan="3" rowspan="3" class="text-center bt br bl bb">
-                <h1 class="m-0">TOP <?= sizeof($titles) ?> </h1>
+                <h1 class="m-0">TOP <?= sizeof($titles) ?></h1>
                 <h5><?= $competition_title ?></h5>
             </th>
             <?php for($i=0; $i<sizeof($events); $i++) { ?>
@@ -346,7 +325,7 @@ foreach ($judges as $judge) {
         <tbody>
         <?php
         foreach($result as $team_key => $team) { ?>
-            <tr<?= empty($judgesWithUnlockedRatings) && !$team['unlocked'] && $team['title'] !== '' ? ' class="table-warning"' : '' ?>>
+            <tr data-team-id="<?= $team['info']['id'] ?>"<?= $team['title'] !== '' ? ' class="table-warning"' : '' ?>>
                 <!-- number -->
                 <td rowspan="2" class="pe-3 fw-bold bl bb td-number" align="right" style="cursor: pointer; user-select: none;">
                     <h3 class="team-number m-0">
@@ -357,10 +336,10 @@ foreach ($judges as $judge) {
                 <!-- avatar -->
                 <td rowspan="2" class="bb" style="width: 56px;">
                     <img
-                            class="team-avatar"
-                            src="../../crud/uploads/<?= $team['info']['avatar'] ?>"
-                            alt="<?= $team['info']['number'] ?>"
-                            style="width: 56px; border-radius: 100%"
+                        class="team-avatar"
+                        src="../../crud/uploads/<?= $team['info']['avatar'] ?>"
+                        alt="<?= $team['info']['number'] ?>"
+                        style="width: 56px; border-radius: 100%"
                     >
                 </td>
 
@@ -391,7 +370,7 @@ foreach ($judges as $judge) {
                 </td>
             </tr>
 
-            <tr<?= empty($judgesWithUnlockedRatings) && !$team['unlocked'] && $team['title'] !== '' ? ' class="table-warning"' : '' ?>>
+            <tr<?= $team['title'] !== '' ? ' class="table-warning"' : '' ?>>
                 <?php for($i=0; $i<sizeof($events); $i++) { ?>
                     <td align="right" class="bb pe-3 text-primary"><?= number_format($team['inputs'][EVENTS[$i]['slug']]['rank'], 2) ?></td>
                     <td align="right" class="bb pe-3 text-primary"><span class="opacity-75"><?= number_format($team['inputs'][EVENTS[$i]['slug']]['rank_ave'], 2) ?></span></td>
@@ -412,20 +391,19 @@ foreach ($judges as $judge) {
     </table>
 
     <!-- Judges -->
-    <div class="container-fluid mt-4 pb-2">
+    <div class="container-fluid">
         <div class="row justify-content-center">
             <?php foreach($judges as $judge) { ?>
-                <div class="col-md-3">
+                <div class="col-md-4 col-sm-4">
                     <div class="mt-5 pt-3 text-center">
-                        <h5 class="mb-0"><?= $judge->getName() ?></h5>
+                        <h6 class="mb-0"><?= $judge->getName() ?></h6>
                     </div>
                     <div class="text-center">
                         <p class="mb-0">
-                            JUDGE <?= $judge->getNumber() ?>
-                            <?php if($judge->isChairmanOfEvent((array_values($criteria ?? [])[0])->getEvent())) { ?>
+                            Judge <?= $judge->getNumber() ?>
+                            <?php if($judge->isChairmanOfEvent($events[0])) { ?>
                                 * (Chairman)
                             <?php } ?>
-
                         </p>
                     </div>
                 </div>
@@ -435,67 +413,89 @@ foreach ($judges as $judge) {
 
     <!-- Summary -->
     <div class="container-fluid mt-5" style="page-break-before: always;">
-        <div class="row justify-content-center">
-            <div class="col-md-12" align="center">
-                <!--                <img src="../../crud/uploads/competition.png" style="width: 256px;" alt="Event">-->
-            </div>
-
+        <div class="row">
             <!-- unordered -->
-            <div class="col-md-6" align="center">
-                <h1><b>TOP <?= sizeof($titles) ?></b> in <b class="text-danger">Random</b> Order</h1>
+            <div class="col-md-6 offset-md-3 col-sm-6 offset-sm-3" align="center">
+                <h4 class="opacity-75"><?= $competition_title ?></h4>
+                <h1>TOP <?= sizeof($titles) ?> in Random Order</h1>
                 <h4>FOR ANNOUNCEMENT</h4>
-                <div class="mt-4" style="width: 80%;">
-                    <table class="table table-bordered mt-3">
+                <div style="width: 80%;">
+                    <table class="table table-bordered mt-3 random-winners">
                         <tbody>
                         <?php
                         foreach($tops_unordered as $team_id) {
-                            $team_key = 'team_'.$team_id;
-                            if (isset($result[$team_key])) {
-                                $team = $result[$team_key];
-                                ?>
-                                <tr>
-                                    <!-- number -->
-                                    <td class="fw-bold text-center">
-                                        <h2 class="m-0 fw-bold">
-                                            <?= $team['info']['number'] ?>
-                                        </h2>
-                                    </td>
+                            $team = $result['team_'.$team_id];
+                            ?>
+                            <tr data-team-id="<?= $team_id ?>">
+                                <!-- number -->
+                                <td class="pe-3 fw-bold text-center">
+                                    <h3 class="m-0">
+                                        <?= $team['info']['number'] ?>
+                                    </h3>
+                                </td>
 
-                                    <!-- avatar -->
-                                    <td style="width: 88px;">
-                                        <img
-                                                src="../../crud/uploads/<?= $team['info']['avatar'] ?>"
-                                                alt="<?= $team['info']['number'] ?>"
-                                                style="width: 100%; border-radius: 100%"
-                                        >
-                                    </td>
+                                <!-- avatar -->
+                                <td style="width: 72px;">
+                                    <img
+                                        src="../../crud/uploads/<?= $team['info']['avatar'] ?>"
+                                        alt="<?= $team['info']['number'] ?>"
+                                        style="width: 100%; border-radius: 100%"
+                                    >
+                                </td>
 
-                                    <!-- name -->
-                                    <td>
-                                        <h6 class="text-uppercase m-0"><?= $team['info']['name'] ?></h6>
-                                        <small class="m-0"><?= $team['info']['location'] ?></small>
-                                    </td>
-                                </tr>
-                                <?php
-                            }
-                        }
-                        ?>
+                                <!-- name -->
+                                <td>
+                                    <h6 class="text-uppercase m-0"><?= $team['info']['name'] ?></h6>
+                                    <small class="m-0"><?= $team['info']['location'] ?></small>
+                                </td>
+                            </tr>
+                        <?php } ?>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-
-        <div class="row justify-content-center" style="page-break-before: always;">
-            <div class="col-md-12" align="center">
-                <!--                <img src="../../crud/uploads/competition.png" style="width: 256px;" alt="Event">-->
-            </div>
-        </div>
     </div>
 </div>
 
-</div>
-
+<script src="../../crud/dist/jquery-3.6.4/jquery-3.6.4.min.js"></script>
 <script src="../../crud/dist/bootstrap-5.2.3/js/bootstrap.bundle.min.js"></script>
+<script>
+    $(function() {
+        const tableResult  = $('table.result');
+        const tableWinners = $('table.random-winners');
+
+        tableResult.find('tbody .td-number').on('dblclick', function() {
+            const tr1 = $(this).parent();
+            const tr2 = tr1.next();
+            if(tr1.hasClass('table-warning')) {
+                tr1.removeClass('table-warning');
+                tr2.removeClass('table-warning');
+                tableWinners.find(`tbody tr[data-team-id="${tr1.attr('data-team-id')}"]`).remove();
+            }
+            else {
+                tr1.addClass('table-warning');
+                tr2.addClass('table-warning');
+                const trWinner = `
+                        <tr data-team-id="${tr1.attr('data-team-id')}">
+                            <td class="pe-3 fw-bold text-center">
+                                <h3 class="m-0">
+                                    ${tr1.find('.team-number').text()}
+                                </h3>
+                            </td>
+                            <td style="width: 72px;">
+                                <img src="${tr1.find('.team-avatar').attr('src')}" alt="5" style="width: 100%; border-radius: 100%">
+                            </td>
+                            <td>
+                                <h6 class="text-uppercase m-0">${tr1.find('.team-name').text()}</h6>
+                                <small class="m-0">${tr1.find('.team-location').text()}</small>
+                            </td>
+                        </tr>
+                    `;
+                tableWinners.find('tbody').append(trWinner);
+            }
+        });
+    });
+</script>
 </body>
 </html>
