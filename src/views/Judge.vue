@@ -81,22 +81,20 @@
                     </td>
 					<td style="width: 72px;">
             <v-avatar size="72" class="avatar">
-              <v-img
-                  class="avatar-hover-effect"
-                  cover
-                  :src="`${$store.getters.appURL}/crud/uploads/${team.avatar}`"
-                >
-                <v-tooltip activator="parent" location="left" open-delay="0">
-                  <template #default>
+              <v-img class="avatar-hover-effect" cover :src="`${$store.getters.appURL}/crud/uploads/${team.avatar}`">
+                <v-tooltip activator="parent" location="left" align="center">
+                  <v-card
+                      class="mx-auto"
+                      theme="dark"
+                  >
                     <v-img
-                          :src="`${$store.getters.appURL}/crud/uploads/full/${team.avatar}`"
-                          :lazy-src="`${$store.getters.appURL}/crud/uploads/full/${team.avatar}`"
-                          width="480"
-                          height="270"
-                          class="rounded-lg"
-                          cover
-                      >
-                      <template #placeholder>
+                        height="400"
+                        width="280"
+                        :lazy-src="`${$store.getters.appURL}/crud/uploads/full/${team.avatar}`"
+                        :src="`${$store.getters.appURL}/crud/uploads/full/${team.avatar}`"
+                        cover
+                    >
+                      <template v-slot:placeholder>
                         <div class="d-flex align-center justify-center fill-height">
                           <v-progress-circular
                               color="grey-lighten-4"
@@ -105,7 +103,7 @@
                         </div>
                       </template>
                     </v-img>
-                  </template>
+                  </v-card>
                 </v-tooltip>
               </v-img>
             </v-avatar>
