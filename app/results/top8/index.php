@@ -32,7 +32,7 @@ const EVENTS = [
 ];
 
 // initialize titles
-$titles = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+$titles = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
 // initialize location quota
 const LOCATION_QUOTA = 1;
